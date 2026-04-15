@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Car Viewer</title>
+    <link rel="stylesheet" href="style.css" />
+
+    <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+
+<body>
+    <div class="page">
+        <header class="topbar">
+            <div>
+                <h1>3D Car Viewer</h1>
+                <p>Interactive car model using HTML, CSS, JavaScript, and Three.js</p>
+            </div>
+
+            <div class="controls-info">
+                <span>Drag = Rotate</span>
+                <span>Scroll = Zoom</span>
+                <span>Right Click = Move</span>
+            </div>
+        </header>
+
+        <main class="viewer-section">
+            <div id="viewer"></div>
+
+            <div class="overlay-card">
+                <h2>Features</h2>
+                <ul>
+                    <li>Pre-selected 3D car model</li>
+                    <li>Rotation enabled</li>
+                    <li>Zoom enabled</li>
+                    <li>Reflections, shadows, and realistic lighting</li>
+                    <li>color change</li>
+                    <li>interior view</li>
+                </ul>
+
+                <div class="color-controls">
+                    <h3>Change Car Color</h3>
+                    <div class="color-buttons">
+                        <button class="color-btn" data-color="#d90429" style="background:#d90429;"></button>
+                        <button class="color-btn" data-color="#1d3557" style="background:#1d3557;"></button>
+                        <button class="color-btn" data-color="#111111" style="background:#111111;"></button>
+                        <button class="color-btn" data-color="#f5f5f5" style="background:#f5f5f5;"></button>
+                        <button class="color-btn" data-color="#6a4c93" style="background:#6a4c93;"></button>
+                        <button class="color-btn reset-btn">Reset</button>
+                    </div>
+                </div>
+                <div class="view-controls">
+                    <h3>Camera View</h3>
+                    <div class="view-buttons">
+                        <button id="exteriorViewBtn" class="view-btn active">Exterior View</button>
+                        <button id="interiorViewBtn" class="view-btn">Interior View</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>
