@@ -200,7 +200,7 @@ function switchToInteriorView() {
 
 
 loader.load(
-  "models/car.glb",
+  "./models/car.glb",
   (gltf) => {
     carModel = gltf.scene;
 
