@@ -28,10 +28,10 @@ camera.position.set(4.5, 2.2, 7);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.enablePan = true;
+controls.enablePan = false;
 controls.enableZoom = true;
 controls.minDistance = 1.5;
-controls.maxDistance = 15;
+controls.maxDistance = 6;
 controls.maxPolarAngle = Math.PI / 2.05;
 controls.target.set(0, 0.45, 0);
 
@@ -45,18 +45,6 @@ ground.rotation.x = -Math.PI / 2;
 ground.position.y = 0;
 ground.receiveShadow = true;
 scene.add(ground);
-
-const floorGeo = new THREE.CircleGeometry(5, 64);
-const floorMat = new THREE.MeshStandardMaterial({
-  color: 0x1f2937,
-  metalness: 0.15,
-  roughness: 0.7
-});
-const floor = new THREE.Mesh(floorGeo, floorMat);
-floor.rotation.x = -Math.PI / 2;
-floor.position.y = -0.001;
-floor.receiveShadow = true;
-scene.add(floor);
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
 scene.add(ambientLight);
@@ -89,6 +77,8 @@ scene.add(rimLight);
 const loader = new GLTFLoader();
 
 let carModel = null;
+let garageModel = null;
+let garageBox = null;
 let colorableMaterials = [];
 let originalColors = new Map();
 let currentView = "exterior";
@@ -99,8 +89,8 @@ const exteriorCameraPosition = new THREE.Vector3(4.5, 2.2, 7);
 
 const exteriorSettings = {
   minDistance: 1.5,
-  maxDistance: 15,
-  enablePan: true,
+  maxDistance: 6,
+  enablePan: false,
   enableZoom: true,
   maxPolarAngle: Math.PI / 2.05
 };
@@ -135,6 +125,22 @@ function resetCarColor() {
   });
 }
 
+function clampCameraInsideGarage() {
+  if (currentView !== "exterior") return;
+
+  // tighter manual limits so camera stays inside visible garage walls
+  const minX = -3.2;
+  const maxX = 3.2;
+  const minY = 0.6;
+  const maxY = 3.8;
+  const minZ = -3.8;
+  const maxZ = 3.8;
+
+  camera.position.x = THREE.MathUtils.clamp(camera.position.x, minX, maxX);
+  camera.position.y = THREE.MathUtils.clamp(camera.position.y, minY, maxY);
+  camera.position.z = THREE.MathUtils.clamp(camera.position.z, minZ, maxZ);
+}
+
 function switchToExteriorView() {
   if (!carModel) return;
 
@@ -144,16 +150,17 @@ function switchToExteriorView() {
   camera.updateProjectionMatrix();
 
   controls.enabled = true;
-  controls.enablePan = true;
+  controls.enablePan = false;
   controls.enableZoom = true;
-  controls.minDistance = 1.5;
-  controls.maxDistance = 15;
-  controls.maxPolarAngle = Math.PI / 2.05;
+  controls.minDistance = exteriorSettings.minDistance;
+  controls.maxDistance = exteriorSettings.maxDistance;
+  controls.maxPolarAngle = exteriorSettings.maxPolarAngle;
   controls.minPolarAngle = 0;
 
   camera.position.copy(exteriorCameraPosition);
   controls.target.set(0, 0.45, 0);
   controls.update();
+  clampCameraInsideGarage();
 
   updateViewButtons();
 }
@@ -170,7 +177,6 @@ function switchToInteriorView() {
   box.getSize(size);
   box.getCenter(center);
 
-  // front/back movement is on X for this model
   const seatX = center.x + size.x * 0.20;
   const seatY = center.y + size.y * 0.17;
   const seatZ = center.z + size.z * -0.019;
@@ -198,6 +204,48 @@ function switchToInteriorView() {
   updateViewButtons();
 }
 
+loader.load(
+  "./models/garage.glb",
+  (gltf) => {
+    garageModel = gltf.scene;
+
+    garageModel.traverse((child) => {
+      if (!child.isMesh) return;
+      child.castShadow = true;
+      child.receiveShadow = true;
+
+      if (child.material) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach((material) => {
+          if (!material) return;
+          material.envMapIntensity = 0.8;
+        });
+      }
+    });
+
+    const garageBoxRaw = new THREE.Box3().setFromObject(garageModel);
+    const garageSize = new THREE.Vector3();
+    const garageCenter = new THREE.Vector3();
+
+    garageBoxRaw.getSize(garageSize);
+    garageBoxRaw.getCenter(garageCenter);
+
+    garageModel.position.sub(garageCenter);
+    garageModel.position.y += garageSize.y / 2 - 0.17;
+
+    const desiredGarageWidth = 8;
+    const garageScale = desiredGarageWidth / garageSize.x;
+    garageModel.scale.setScalar(garageScale);
+
+    scene.add(garageModel);
+
+    garageBox = new THREE.Box3().setFromObject(garageModel);
+  },
+  undefined,
+  (error) => {
+    console.error("Error loading garage:", error);
+  }
+);
 
 loader.load(
   "./models/car.glb",
@@ -271,7 +319,7 @@ loader.load(
 
     controls.target.set(0, 0.45, 0);
 
-    exteriorCameraPosition.set(4.5, 2.2, 7);
+    exteriorCameraPosition.set(4.5, 2.2, 5.8);
     camera.position.copy(exteriorCameraPosition);
     camera.lookAt(controls.target);
 
@@ -282,6 +330,11 @@ loader.load(
     interiorMarker.visible = false;
     scene.add(interiorMarker);
 
+    if (garageModel) {
+      garageBox = new THREE.Box3().setFromObject(garageModel);
+    }
+
+    clampCameraInsideGarage();
     updateViewButtons();
   },
   undefined,
@@ -338,6 +391,7 @@ window.addEventListener("resize", () => {
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
+  clampCameraInsideGarage();
   renderer.render(scene, camera);
 }
 
