@@ -76,6 +76,78 @@ scene.add(rimLight);
 
 const loader = new GLTFLoader();
 
+let enterAudio = null;
+let startAudio = null;
+let engineAudio = null;
+let shutdownAudio = null;
+let revStartAudio = null;
+let revLoopAudio = null;
+let revEndAudio = null;
+let isHoldingW = false;
+let revStartTimeout = null;
+
+let isRevving = false;
+let engineOn = false;
+let hasPlayedInteriorEnter = false;
+
+const audioListener = new THREE.AudioListener();
+camera.add(audioListener);
+
+enterAudio = new THREE.Audio(audioListener);
+startAudio = new THREE.Audio(audioListener);
+engineAudio = new THREE.Audio(audioListener);
+shutdownAudio = new THREE.Audio(audioListener);
+revStartAudio = new THREE.Audio(audioListener);
+revLoopAudio = new THREE.Audio(audioListener);
+revEndAudio = new THREE.Audio(audioListener);
+
+const audioLoader = new THREE.AudioLoader();
+
+audioLoader.load("./sounds/interior-enter.mp3", (buffer) => {
+  enterAudio.setBuffer(buffer);
+  enterAudio.setLoop(false);
+  enterAudio.setVolume(1.0);
+});
+
+audioLoader.load("./sounds/start.mp3", (buffer) => {
+  startAudio.setBuffer(buffer);
+  startAudio.setLoop(false);
+  startAudio.setVolume(1.0);
+});
+
+audioLoader.load("./sounds/engine.mp3", (buffer) => {
+  engineAudio.setBuffer(buffer);
+  engineAudio.setLoop(true);
+  engineAudio.setVolume(0.8);
+});
+
+audioLoader.load("./sounds/shutdown.mp3", (buffer) => {
+  shutdownAudio.setBuffer(buffer);
+  shutdownAudio.setLoop(false);
+  shutdownAudio.setVolume(1.0);
+});
+
+
+audioLoader.load("./sounds/rev-start.mp3", (buffer) => {
+  revStartAudio.setBuffer(buffer);
+  revStartAudio.setLoop(false);
+  revStartAudio.setVolume(1.0);
+});
+
+audioLoader.load("./sounds/rev.mp3", (buffer) => {
+  revLoopAudio.setBuffer(buffer);
+  revLoopAudio.setLoop(true);
+  revLoopAudio.setVolume(1.0);
+});
+
+audioLoader.load("./sounds/rev-end.mp3", (buffer) => {
+  revEndAudio.setBuffer(buffer);
+  revEndAudio.setLoop(false);
+  revEndAudio.setVolume(1.0);
+});
+
+
+
 let carModel = null;
 let garageModel = null;
 let garageBox = null;
@@ -128,7 +200,6 @@ function resetCarColor() {
 function clampCameraInsideGarage() {
   if (currentView !== "exterior") return;
 
-  // tighter manual limits so camera stays inside visible garage walls
   const minX = -3.2;
   const maxX = 3.2;
   const minY = 0.6;
@@ -139,6 +210,41 @@ function clampCameraInsideGarage() {
   camera.position.x = THREE.MathUtils.clamp(camera.position.x, minX, maxX);
   camera.position.y = THREE.MathUtils.clamp(camera.position.y, minY, maxY);
   camera.position.z = THREE.MathUtils.clamp(camera.position.z, minZ, maxZ);
+}
+
+function playIdleEngineIfNeeded() {
+  if (
+    currentView === "interior" &&
+    engineOn &&
+    !isRevving &&
+    engineAudio &&
+    engineAudio.buffer &&
+    !engineAudio.isPlaying
+  ) {
+    engineAudio.play();
+  }
+}
+
+function stopIdleEngine() {
+  if (engineAudio && engineAudio.isPlaying) {
+    engineAudio.stop();
+  }
+}
+
+function stopRevIfPlaying() {
+  isRevving = false;
+
+  if (revStartAudio && revStartAudio.isPlaying) revStartAudio.stop();
+  if (revLoopAudio && revLoopAudio.isPlaying) revLoopAudio.stop();
+}
+
+function stopAllEngineSounds() {
+  stopRevIfPlaying();
+  stopIdleEngine();
+
+  if (startAudio && startAudio.isPlaying) {
+    startAudio.stop();
+  }
 }
 
 function switchToExteriorView() {
@@ -161,6 +267,9 @@ function switchToExteriorView() {
   controls.target.set(0, 0.45, 0);
   controls.update();
   clampCameraInsideGarage();
+
+  hasPlayedInteriorEnter = false;
+  stopAllEngineSounds();
 
   updateViewButtons();
 }
@@ -201,6 +310,16 @@ function switchToInteriorView() {
   controls.target.set(targetX, targetY, targetZ);
   controls.update();
 
+  if (!hasPlayedInteriorEnter && enterAudio && enterAudio.buffer) {
+    if (enterAudio.isPlaying) {
+      enterAudio.stop();
+    }
+    enterAudio.play();
+    hasPlayedInteriorEnter = true;
+  }
+  setTimeout(() => {
+    playIdleEngineIfNeeded();
+  }, 200);
   updateViewButtons();
 }
 
@@ -232,13 +351,13 @@ loader.load(
 
     garageModel.position.sub(garageCenter);
     garageModel.position.y += garageSize.y / 2 - 0.17;
+    garageModel.position.z -= 0.5;
 
     const desiredGarageWidth = 8;
     const garageScale = desiredGarageWidth / garageSize.x;
     garageModel.scale.setScalar(garageScale);
 
     scene.add(garageModel);
-
     garageBox = new THREE.Box3().setFromObject(garageModel);
   },
   undefined,
@@ -379,6 +498,94 @@ if (exteriorBtn) {
 if (interiorBtn) {
   interiorBtn.addEventListener("click", switchToInteriorView);
 }
+
+window.addEventListener("keydown", (event) => {
+  const key = event.key.toLowerCase();
+
+  if (key === "o") {
+    if (currentView !== "interior") return;
+
+    if (!engineOn) {
+      engineOn = true;
+      stopRevIfPlaying();
+
+      if (startAudio && startAudio.buffer) {
+        if (startAudio.isPlaying) startAudio.stop();
+        startAudio.play();
+      }
+
+      setTimeout(() => {
+        setTimeout(() => {
+          playIdleEngineIfNeeded();
+        }, 200);
+      }, 700);
+    } else {
+      engineOn = false;
+      stopAllEngineSounds();
+
+      if (shutdownAudio && shutdownAudio.buffer) {
+        if (shutdownAudio.isPlaying) shutdownAudio.stop();
+        shutdownAudio.play();
+      }
+    }
+
+    return;
+  }
+
+  if (key === "w") {
+    if (currentView !== "interior") return;
+    if (!engineOn) return;
+    if (isHoldingW) return;
+    if (!revStartAudio || !revStartAudio.buffer) return;
+    if (!revLoopAudio || !revLoopAudio.buffer) return;
+
+    isHoldingW = true;
+    stopIdleEngine();
+
+    if (revStartAudio.isPlaying) revStartAudio.stop();
+    if (revLoopAudio.isPlaying) revLoopAudio.stop();
+    if (revEndAudio && revEndAudio.isPlaying) revEndAudio.stop();
+
+    revStartAudio.play();
+
+    if (revStartTimeout) {
+      clearTimeout(revStartTimeout);
+    }
+
+    revStartTimeout = setTimeout(() => {
+      if (isHoldingW) {
+        if (revLoopAudio.isPlaying) revLoopAudio.stop();
+        revLoopAudio.play();
+      }
+    }, 600); // match rev-start.mp3 length
+  }
+});
+
+window.addEventListener("keyup", (event) => {
+  const key = event.key.toLowerCase();
+
+  if (key === "w") {
+    isHoldingW = false;
+
+    if (revStartTimeout) {
+      clearTimeout(revStartTimeout);
+      revStartTimeout = null;
+    }
+
+    if (revStartAudio && revStartAudio.isPlaying) revStartAudio.stop();
+    if (revLoopAudio && revLoopAudio.isPlaying) revLoopAudio.stop();
+
+    // play rev end
+    if (revEndAudio && revEndAudio.buffer) {
+      if (revEndAudio.isPlaying) revEndAudio.stop();
+      revEndAudio.play();
+    }
+
+    setTimeout(() => {
+      playIdleEngineIfNeeded();
+    }, 200);
+  }
+});
 
 window.addEventListener("resize", () => {
   camera.aspect = container.clientWidth / container.clientHeight;

@@ -27,7 +27,8 @@
             <div class="controls-info">
                 <span>Drag = Rotate</span>
                 <span>Scroll = Zoom</span>
-                <span>Right Click = Move</span>
+                <span>O = Start / Stop Engine</span>
+                <span>W = Rev Engine</span>
             </div>
         </header>
 
@@ -41,8 +42,9 @@
                     <li>Rotation enabled</li>
                     <li>Zoom enabled</li>
                     <li>Reflections, shadows, and realistic lighting</li>
-                    <li>color change</li>
-                    <li>interior view</li>
+                    <li>Color change</li>
+                    <li>Interior view</li>
+                    <li>Engine sound controls</li>
                 </ul>
 
                 <div class="color-controls">
@@ -56,12 +58,22 @@
                         <button class="color-btn reset-btn">Reset</button>
                     </div>
                 </div>
+
                 <div class="view-controls">
                     <h3>Camera View</h3>
                     <div class="view-buttons">
                         <button id="exteriorViewBtn" class="view-btn active">Exterior View</button>
                         <button id="interiorViewBtn" class="view-btn">Interior View</button>
                     </div>
+                </div>
+
+                <div class="engine-controls">
+                    <h3>Engine Controls</h3>
+                    <ul class="engine-controls-list">
+                        <li><strong>O</strong> — Start / Stop engine</li>
+                        <li><strong>W</strong> — Hold to rev</li>
+                        <li>Engine controls work in <strong>Interior View</strong></li>
+                    </ul>
                 </div>
             </div>
         </main>

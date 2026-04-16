@@ -201,3 +201,22 @@ canvas {
     background: rgba(255, 255, 255, 0.22);
     border-color: rgba(255, 255, 255, 0.4);
 }
+.engine-controls {
+  margin-top: 18px;
+}
+
+.engine-controls-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #e5e7eb;
+}
+
+.engine-controls-list li {
+  margin-bottom: 8px;
+}
+
+.controls-info {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
